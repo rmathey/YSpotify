@@ -1,0 +1,38 @@
+[
+  {
+    "username": "admin",
+    "password": "password"
+  },
+  {
+    "username": "bob",
+    "password": "password"
+  },
+  {
+    "username": "alice",
+    "password": "password"
+  },
+  {
+    "username": "mdr",
+    "password": "mdr"
+  },
+  {
+    "username": "mdrr",
+    "password": "mdrr"
+  },
+  {
+    "username": "utilisateur1",
+    "password": "utilisateur1"
+  },
+  {
+    "username": "utilisateur11",
+    "password": "password"
+  },
+  {
+    "username": "utilisateur11zerzefe",
+    "password": "password"
+  },
+  {
+    "username": "usern1",
+    "password": "password"
+  }
+]
