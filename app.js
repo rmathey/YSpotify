@@ -3,9 +3,10 @@ const app = express();
 const querystring = require('querystring');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-const editJsonFile = require("edit-json-file");
-
 const clientCredentials = require('./client-credentials.json');
+const editJsonFile = require("edit-json-file");
+const fs = require('fs');
+
 const redirect_uri = 'http://localhost:3000/callback/';
 
 const SECRET = 'maclesecrete'
@@ -67,25 +68,25 @@ app.get("/group", (req, res) => {
 
     const decoded = jwt.decode(token)
     const user = users.filter(u => u.username == decoded.username)[0]
-    console.log(user.username)
 
     var groups = require('./Groups.json');
-    const group = groups.find(g => g.name === req.query.name)
+    //const group = groups.find(g => g.name === req.query.name)
+    const group = false;
 
 
     if (!group) {
-        console.log("MDRRRRRRRRRRRRRRRRRRRR")
         let file = editJsonFile(`Groups.json`);
         var user_data = {'username': user.username, 'leader': true}
         var group_data = {"name": req.query.name, "users": [user_data]};
-        file.append("req.query.name", group_data);
+        file.set('test', 'group_data');
         file.save();
+        console.log("XD")
     }
     else {
         let file = editJsonFile(`Groups.json`);
         var user_data = {'username': user.username, 'leader': false}
-        
-        file.append('users', group_data);
+        var group_data = {"name": req.query.name, "users": [user_data]};
+        file.append('users', user_data);
         file.save();
     }
 
