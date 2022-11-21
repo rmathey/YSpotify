@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
 const fs = require('fs');
+const { getgroups } = require('process');
 
 const redirect_uri = 'http://localhost:3000/callback/';
 
@@ -24,7 +25,7 @@ app.get("/signup", (req, res) => {
     }
 
     let file = editJsonFile(`Users.json`);
-    var user_data = {"username": req.query.username, "password": req.query.password};
+    var user_data = { "username": req.query.username, "password": req.query.password };
     file.append("", user_data);
     file.save();
 
@@ -53,6 +54,10 @@ app.get("/signin", (req, res) => {
     return res.json({ access_token: token })
 })
 
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
+
 app.get("/group", (req, res) => {
     const token = req.query.token;
     var users = require('./Users.json');
@@ -67,33 +72,50 @@ app.get("/group", (req, res) => {
     }
 
     const decoded = jwt.decode(token)
-    const user = users.filter(u => u.username == decoded.username)[0]
+    const user = users.filter(u => u.username == decoded.username)[0];
 
     var groups = require('./Groups.json');
-    //const group = groups.find(g => g.name === req.query.name)
-    const group = false;
+    let file = editJsonFile(`./Groups.json`);
 
+    let keys = Object.keys(groups);
 
-    if (!group) {
-        let file = editJsonFile(`Groups.json`);
-        var user_data = {'username': user.username, 'leader': true}
-        var group_data = {"name": req.query.name, "users": [user_data]};
-        file.set('test', 'group_data');
-        file.save();
-        console.log("XD")
-    }
-    else {
-        let file = editJsonFile(`Groups.json`);
-        var user_data = {'username': user.username, 'leader': false}
-        var group_data = {"name": req.query.name, "users": [user_data]};
-        file.append('users', user_data);
+    if (file.get(req.query.name + "." + user.username) === undefined) {
+        for (let i = 0; i < keys.length; i++) {
+            var user_keys = Object.keys(file.toObject()[keys[i]]);
+            console.log(user_keys);
+            for (let j = 0; j < user_keys.length; j++) {
+                if (user_keys[j] == user.username) {
+                    file.unset(keys[i] + "." + user_keys[j]);
+                    var user_keys_bis = Object.keys(file.toObject()[keys[i]]);
+                    if (!user_keys_bis.length == 0) {
+                        var integer = getRandomInt(user_keys_bis.length);
+                        file.set(keys[i] + "." + user_keys_bis[integer], true);
+                    }
+                }
+            }
+        }
+
+        for (let i = 0; i < keys.length; i++) {
+            var user_keys = Object.keys(file.toObject()[keys[i]]);
+            console.log(keys[i]);
+            if (user_keys.length === 0) {
+                file.unset(keys[i])
+            }
+        }
+
+        if (!file.get(req.query.name)) {
+            file.set(req.query.name, {});
+            file.set(req.query.name + "." + user.username, true);
+        }
+        else {
+            file.set(req.query.name + "." + user.username, false);
+        }
+
         file.save();
     }
 
     return res.json({ message: 'fin' })
 })
-
-
 
 app.get("/auth-url", (req, res) => {
     const scope = 'user-read-private user-read-email user-read-recently-played';
@@ -136,22 +158,22 @@ app.get('/callback', (req, res) => {
 });
 
 app.get('/recently-played', async (req, res) => {
-        const auth = req.header('Authorization');
+    const auth = req.header('Authorization');
 
-        if (!auth || !auth.startsWith('Bearer ')) {
-            res.status(401).send('Unauthorized');
-            return;
+    if (!auth || !auth.startsWith('Bearer ')) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+
+    const token = auth.split(' ')[1];
+
+    const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
+        headers: {
+            'Authorization': 'Bearer ' + token
         }
+    });
 
-        const token = auth.split(' ')[1];
-
-        const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
-            headers: {
-                'Authorization': 'Bearer ' + token
-            }
-        });
-
-        res.json(response.data);
+    res.json(response.data);
 });
 
 app.listen(3000, () => {

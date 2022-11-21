@@ -12,27 +12,15 @@
     "password": "password"
   },
   {
-    "username": "mdr",
-    "password": "mdr"
-  },
-  {
-    "username": "mdrr",
-    "password": "mdrr"
-  },
-  {
     "username": "utilisateur1",
     "password": "utilisateur1"
   },
   {
-    "username": "utilisateur11",
+    "username": "user2",
     "password": "password"
   },
   {
-    "username": "utilisateur11zerzefe",
-    "password": "password"
-  },
-  {
-    "username": "usern1",
+    "username": "user1",
     "password": "password"
   }
 ]
