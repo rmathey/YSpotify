@@ -117,6 +117,33 @@ app.get("/group", (req, res) => {
     return res.json({ message: 'fin' })
 })
 
+app.get("/grouplist", (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+
+    const decoded = jwt.decode(token)
+
+    var groups = require('./Groups.json');
+    let file = editJsonFile(`./Groups.json`);
+
+    let text = '';
+    let keys = Object.keys(groups);
+    for (let i = 0; i < keys.length; i++) {
+        var group_keys = Object.keys(file.toObject()[keys[i]]);
+        text += "Nom: " + keys[i];
+        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
+        text += ' <br> ';
+    }
+    //return res.json({ message: text })
+    res.set('Content-Type', 'text/html');
+    res.send(JSON.stringify(text));
+})
+
 app.get("/auth-url", (req, res) => {
     const scope = 'user-read-private user-read-email user-read-recently-played';
 
