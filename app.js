@@ -138,8 +138,52 @@ app.get("/grouplist", (req, res) => {
         text += "Nom: " + keys[i];
         text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
         text += ' <br> ';
+        // A faire
+        // Refaire l'affichage du texte
     }
     //return res.json({ message: text })
+    res.set('Content-Type', 'text/html');
+    res.send(JSON.stringify(text));
+})
+
+app.get("/mygroup", (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+
+    const decoded = jwt.decode(token)
+    const user = users.filter(u => u.username == decoded.username)[0];
+
+    var groups = require('./Groups.json');
+    let file = editJsonFile(`./Groups.json`);
+
+    let text = '';
+    let group_keys = Object.keys(groups);
+
+    for (let i = 0; i < group_keys.length; i++) {
+
+        var user_keys_bis = Object.keys(file.toObject()[group_keys[i]]);
+        console.log(user_keys_bis);
+        if (user_keys_bis.includes(user.username)) {
+            text += "Nom: " + user.username;
+            text += ' <br> ';
+            text += " Nom du groupe: " + group_keys[i];
+            // A faire
+            // Affichier si lié a un compte Spotify ect
+
+            // A faire aussi
+            // Refaire l'affichage du texte
+        }
+    }
+
+    if (text = '') {
+        text = "L'utilisateur n'appartient à aucun groupe"
+    }
+
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
