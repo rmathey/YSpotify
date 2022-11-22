@@ -1,1 +1,9 @@
-{}
+{
+  "groupe1": {
+    "user2": true,
+    "user3": false
+  },
+  "groupe555": {
+    "user1": true
+  }
+}
