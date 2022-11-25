@@ -9,7 +9,8 @@
   },
   {
     "username": "alice",
-    "password": "password"
+    "password": "password",
+    "connecter": ""
   },
   {
     "username": "utilisateur1",
