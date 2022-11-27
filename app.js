@@ -25,6 +25,7 @@ app.get("/signup", (req, res) => {
     }
     let file = editJsonFile(`Users.json`);
     var user_data = { "username": req.query.username, "password": req.query.password };
+    
     file.append("", user_data);
     file.save();
 
@@ -49,7 +50,7 @@ app.get("/signin", (req, res) => {
     }, SECRET, { expiresIn: '1h' })
 
     res.header('Content-Type', 'application/json')
-    return res.json({ access_token: token })
+    return res.json({ access_token: token, link: `localhost:3000/auth-url?token=${token}` })
 })
 
 function getRandomInt(max) {
@@ -189,12 +190,13 @@ app.get("/mygroup", (req, res) => {
 let user = []
 
 app.get("/auth-url", (req, res) => {
+    var users = require('./Users.json');
+    
     if (req.query.token){
         jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
             if (err) {
                 res.status(401).json({ message: 'Token invalide' })
             }else{
-                var users = require('./Users.json');
                 user = users.filter(u => u.username == decodedToken.username)[0]
                 if (!user.connecter) {
                     const scope = 'user-read-private user-read-email user-read-recently-played';
@@ -231,6 +233,22 @@ app.get("/auth-url", (req, res) => {
             headers: authOptions.headers
         }).then((response) => {
             const data = response.data;
+
+            user['connecter'] = data.access_token
+            var user_data = { "username": user.username, "password": user.password, "connected": user.connecter };
+            try {
+                fs.writeFile('Connected.json', user_data);
+            } catch (err) {
+                console.log(err);
+                console.log('dd');
+            }
+
+            /*file.append("", user_data);
+            file.save();*/
+            
+
+            //res.send("dd")
+
             res.send(data)
         }).catch((err) => {
             console.log(err)
