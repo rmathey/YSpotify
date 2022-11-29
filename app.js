@@ -191,8 +191,21 @@ let user = []
 
 app.get("/auth-url", (req, res) => {
     var users = require('./Users.json');
+    let connect = require('./Connected.json')
+    let user2
+
+    for (let i = 0; i < users.length; i++) {
+        for (let j = 0; j < connect.length; j++) {
+            if (users[i].name === connect[j].name) {
+                user2 = connect[j]
+            }
+        }
+        
+    }
+
+//console.log(!user2.connected);
     
-    if (req.query.token){
+    if (req.query.token && !user2.connected){
         jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
             if (err) {
                 res.status(401).json({ message: 'Token invalide' })
@@ -212,7 +225,7 @@ app.get("/auth-url", (req, res) => {
                 res.send(user);
             }
         })
-    }else if(req.query.code){
+    }else if(req.query.code && !user2.connected){
         let code = req.query.code
         //res.send(user)
 
@@ -237,23 +250,25 @@ app.get("/auth-url", (req, res) => {
             user['connecter'] = data.access_token
             var user_data = { "username": user.username, "password": user.password, "connected": user.connecter };
             try {
-                fs.writeFile('Connected.json', user_data);
+                let file = editJsonFile(`Connected.json`);
+                file.append("", user_data);
+                file.save();
+                console.log("Information sauvé");
             } catch (err) {
+                console.log('================');
                 console.log(err);
-                console.log('dd');
+                console.log('================');
             }
 
-            /*file.append("", user_data);
-            file.save();*/
-            
-
-            //res.send("dd")
+           
 
             res.send(data)
         }).catch((err) => {
             console.log(err)
         });
 
+    }else if (user2.connected) {
+        res.send('Access token: ' + JSON.stringify(user2.connected))
     }
 
 
