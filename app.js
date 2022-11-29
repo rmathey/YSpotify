@@ -203,7 +203,6 @@ app.get("/auth-url", (req, res) => {
         
     }
 
-//console.log(!user2.connected);
     
     if (req.query.token && !user2.connected){
         jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
@@ -213,7 +212,6 @@ app.get("/auth-url", (req, res) => {
                 user = users.filter(u => u.username == decodedToken.username)[0]
                 if (!user.connecter) {
                     const scope = 'user-read-private user-read-email user-read-recently-played';
-                    //res.send(user)
                     res.send('https://accounts.spotify.com/authorize?' +
                         querystring.stringify({
                             response_type: 'code',
@@ -227,7 +225,6 @@ app.get("/auth-url", (req, res) => {
         })
     }else if(req.query.code && !user2.connected){
         let code = req.query.code
-        //res.send(user)
 
         const authOptions = {
             url: 'https://accounts.spotify.com/api/token',
@@ -260,8 +257,6 @@ app.get("/auth-url", (req, res) => {
                 console.log('================');
             }
 
-           
-
             res.send(data)
         }).catch((err) => {
             console.log(err)
@@ -271,46 +266,12 @@ app.get("/auth-url", (req, res) => {
         res.send('Access token: ' + JSON.stringify(user2.connected))
     }
 
-
-
-    /*const scope = 'user-read-private user-read-email user-read-recently-played';
-
-    res.send('https://accounts.spotify.com/authorize?' +
-        querystring.stringify({
-            response_type: 'code',
-            client_id: clientCredentials.id,
-            scope: scope,
-            redirect_uri: redirect_uri,
-        }));*/
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
     res.redirect('/auth-url?code=' + code)
-/*
 
-    const authOptions = {
-        url: 'https://accounts.spotify.com/api/token',
-        form: {
-            code: code,
-            redirect_uri: redirect_uri,
-            grant_type: 'authorization_code'
-        },
-        headers: {
-            'Authorization': 'Basic ' +
-                (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
-            'content-type': 'application/x-www-form-urlencoded'
-        },
-    };
-    axios.post(authOptions.url, authOptions.form, {
-        headers: authOptions.headers
-    }).then((response) => {
-        const data = response.data;
-        console.log(data);
-        res.json(data);
-    }).catch((err) => {
-        console.log(err)
-    });*/
 });
 
 app.get('/recently-played', async (req, res) => {
