@@ -23,6 +23,7 @@ app.get("/signup", (req, res) => {
     if (user) {
         return res.status(400).json({ message: 'Utilisateur existe déjà' })
     }
+
     let file = editJsonFile(`Users.json`);
     var user_data = { "username": req.query.username, "password": req.query.password };
     file.append("", user_data);
@@ -33,7 +34,7 @@ app.get("/signup", (req, res) => {
 
 app.get("/signin", (req, res) => {
     if (!req.query.username || !req.query.password) {
-        return res.status(400).json({ message: 'Veuillez entrer un login et un mot de passe exemple ?username= &password=' })
+        return res.status(400).json({ message: 'Veuillez entrer un login et un mot de passe' })
     }
 
     var users = require('./Users.json');
@@ -49,6 +50,7 @@ app.get("/signin", (req, res) => {
     }, SECRET, { expiresIn: '1h' })
 
     res.header('Content-Type', 'application/json')
+
     return res.json({ access_token: token })
 })
 
@@ -186,75 +188,20 @@ app.get("/mygroup", (req, res) => {
     res.send(JSON.stringify(text));
 })
 
-let user = []
-
 app.get("/auth-url", (req, res) => {
-    if (req.query.token){
-        jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
-            if (err) {
-                res.status(401).json({ message: 'Token invalide' })
-            }else{
-                var users = require('./Users.json');
-                user = users.filter(u => u.username == decodedToken.username)[0]
-                if (!user.connecter) {
-                    const scope = 'user-read-private user-read-email user-read-recently-played';
-                    //res.send(user)
-                    res.send('https://accounts.spotify.com/authorize?' +
-                        querystring.stringify({
-                            response_type: 'code',
-                            client_id: clientCredentials.id,
-                            scope: scope,
-                            redirect_uri: redirect_uri
-                        }));
-                }
-                res.send(user);
-            }
-        })
-    }else if(req.query.code){
-        let code = req.query.code
-        //res.send(user)
+    const scope = 'user-read-private user-read-email user-read-recently-played';
 
-        const authOptions = {
-            url: 'https://accounts.spotify.com/api/token',
-            form: {
-                code: code,
-                redirect_uri: redirect_uri,
-                grant_type: 'authorization_code'
-            },
-            headers: {
-                'Authorization': 'Basic ' +
-                    (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
-                'content-type': 'application/x-www-form-urlencoded'
-            },
-        };
-        axios.post(authOptions.url, authOptions.form, {
-            headers: authOptions.headers
-        }).then((response) => {
-            const data = response.data;
-            res.send(data)
-        }).catch((err) => {
-            console.log(err)
-        });
-
-    }
-
-
-
-    /*const scope = 'user-read-private user-read-email user-read-recently-played';
-
-    res.send('https://accounts.spotify.com/authorize?' +
+    res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
             client_id: clientCredentials.id,
             scope: scope,
             redirect_uri: redirect_uri,
-        }));*/
+        }));
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
-    res.redirect('/auth-url?code=' + code)
-/*
 
     const authOptions = {
         url: 'https://accounts.spotify.com/api/token',
@@ -269,6 +216,7 @@ app.get('/callback', (req, res) => {
             'content-type': 'application/x-www-form-urlencoded'
         },
     };
+
     axios.post(authOptions.url, authOptions.form, {
         headers: authOptions.headers
     }).then((response) => {
@@ -277,7 +225,7 @@ app.get('/callback', (req, res) => {
         res.json(data);
     }).catch((err) => {
         console.log(err)
-    });*/
+    });
 });
 
 app.get('/recently-played', async (req, res) => {
@@ -300,5 +248,5 @@ app.get('/recently-played', async (req, res) => {
 });
 
 app.listen(3000, () => {
-    console.log("Server listening... port : 3000")
+    console.log("Server listening...")
 });
