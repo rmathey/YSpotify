@@ -191,26 +191,31 @@ let user = []
 
 app.get("/auth-url", (req, res) => {
     var users = require('./Users.json');
-    let connect = require('./Connected.json')
-    let user2
+    let connect = require('./SpotifyAccounts.json')
+    let user2 = ''
 
-    for (let i = 0; i < users.length; i++) {
-        for (let j = 0; j < connect.length; j++) {
-            if (users[i].name === connect[j].name) {
-                user2 = connect[j]
+    /*if (condition) {
+        for (let i = 0; i < users.length; i++) {
+            for (let j = 0; j < connect.length; j++) {
+                console.log(users[i].name === connect[j].name);
+                if (users[i].name === connect[j].name) {
+                    user2 = connect[j]
+                }
             }
+            
         }
-        
-    }
+    }*/
 
     
-    if (req.query.token && !user2.connected){
+    if (req.query.token){
         jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
             if (err) {
                 res.status(401).json({ message: 'Token invalide' })
             }else{
                 user = users.filter(u => u.username == decodedToken.username)[0]
-                if (!user.connecter) {
+               /*user2 = user.filter(u => u.username == connect.username)
+                console.log(user2);*/
+                if (!user.access_token) {
                     const scope = 'user-read-private user-read-email user-read-recently-played';
                     res.send('https://accounts.spotify.com/authorize?' +
                         querystring.stringify({
@@ -220,12 +225,12 @@ app.get("/auth-url", (req, res) => {
                             redirect_uri: redirect_uri
                         }));
                 }
-                res.send(user);
+                res.send(user2);
             }
         })
-    }else if(req.query.code && !user2.connected){
+    }else if(req.query.code){
         let code = req.query.code
-
+        console.log(user);
         const authOptions = {
             url: 'https://accounts.spotify.com/api/token',
             form: {
@@ -244,10 +249,10 @@ app.get("/auth-url", (req, res) => {
         }).then((response) => {
             const data = response.data;
 
-            user['connecter'] = data.access_token
-            var user_data = { "username": user.username, "password": user.password, "connected": user.connecter };
+            user['access_token'] = data.access_token
+            var user_data = { "username": user.username, "refresh_token": user.access_token };
             try {
-                let file = editJsonFile(`Connected.json`);
+                let file = editJsonFile(`SpotifyAccounts.json`);
                 file.append("", user_data);
                 file.save();
                 console.log("Information sauvé");
@@ -262,9 +267,9 @@ app.get("/auth-url", (req, res) => {
             console.log(err)
         });
 
-    }else if (user2.connected) {
+    }/*else if (user2.connected) {
         res.send('Access token: ' + JSON.stringify(user2.connected))
-    }
+    }*/
 
 });
 
