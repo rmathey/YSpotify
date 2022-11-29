@@ -8,9 +8,11 @@ const editJsonFile = require("edit-json-file");
 const fs = require('fs');
 const { getgroups } = require('process');
 
-const redirect_uri = 'http://localhost:3000/callback/';
+const redirect_uri = 'http://localhost:3000/callback';
 
 const SECRET = 'maclesecrete'
+
+let mapping = []
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -56,6 +58,19 @@ app.get("/signin", (req, res) => {
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
+
+
+function getRandomState(max) {
+    const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for ( let i = 0; i < max; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+
+    return result;
+}
+
 
 app.get("/group", (req, res) => {
     const token = req.query.token;
@@ -187,48 +202,48 @@ app.get("/mygroup", (req, res) => {
     res.send(JSON.stringify(text));
 })
 
-let user = []
+let user = {}
 
 app.get("/auth-url", (req, res) => {
     var users = require('./Users.json');
     let connect = require('./SpotifyAccounts.json')
-    let user2 = ''
+    let user2 = []
 
-    /*if (condition) {
-        for (let i = 0; i < users.length; i++) {
-            for (let j = 0; j < connect.length; j++) {
-                console.log(users[i].name === connect[j].name);
-                if (users[i].name === connect[j].name) {
-                    user2 = connect[j]
-                }
-            }
-            
-        }
-    }*/
-
-    
     if (req.query.token){
         jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
             if (err) {
                 res.status(401).json({ message: 'Token invalide' })
             }else{
                 user = users.filter(u => u.username == decodedToken.username)[0]
-               /*user2 = user.filter(u => u.username == connect.username)
-                console.log(user2);*/
-                if (!user.access_token) {
+                for (let i = 0; i < connect.length; i++) {
+                    if (user.username === connect[i].username) {
+                        user2 = connect[i]
+                    }    
+                }
+                if (!user.access_token && !user2.refresh_token) {
+
+                    let state = getRandomState(12)
+
+                    mapping[`${state}`] = user.username
+
+
                     const scope = 'user-read-private user-read-email user-read-recently-played';
                     res.send('https://accounts.spotify.com/authorize?' +
                         querystring.stringify({
                             response_type: 'code',
                             client_id: clientCredentials.id,
                             scope: scope,
-                            redirect_uri: redirect_uri
+                            redirect_uri: redirect_uri,
+                            state: state
                         }));
+                }else{
+                    //res.send(user2);
+                    res.send('Access token: ' + JSON.stringify(user2.refresh_token))
                 }
-                res.send(user2);
             }
         })
     }else if(req.query.code){
+        console.log(req.query.state);
         let code = req.query.code
         console.log(user);
         const authOptions = {
@@ -249,8 +264,8 @@ app.get("/auth-url", (req, res) => {
         }).then((response) => {
             const data = response.data;
 
-            user['access_token'] = data.access_token
-            var user_data = { "username": user.username, "refresh_token": user.access_token };
+            user['refresh_token'] = data.refresh_token
+            var user_data = { "username": user.username, "refresh_token": user.refresh_token };
             try {
                 let file = editJsonFile(`SpotifyAccounts.json`);
                 file.append("", user_data);
@@ -267,15 +282,15 @@ app.get("/auth-url", (req, res) => {
             console.log(err)
         });
 
-    }/*else if (user2.connected) {
-        res.send('Access token: ' + JSON.stringify(user2.connected))
-    }*/
+    }
 
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
-    res.redirect('/auth-url?code=' + code)
+    const state = req.query.state
+    console.log("state =>" + state);
+    res.redirect('/auth-url?code=' + code + '&state=' + state)
 
 });
 
