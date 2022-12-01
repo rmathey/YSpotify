@@ -3,6 +3,7 @@ const app = express();
 const querystring = require('querystring');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+//const clientCredentials = require('./client-credentials2.json');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
 const fs = require('fs');
@@ -243,9 +244,7 @@ app.get("/auth-url", (req, res) => {
             }
         })
     }else if(req.query.code){
-        console.log(req.query.state);
         let code = req.query.code
-        console.log(user);
         const authOptions = {
             url: 'https://accounts.spotify.com/api/token',
             form: {
@@ -289,7 +288,6 @@ app.get("/auth-url", (req, res) => {
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
     const state = req.query.state
-    console.log("state =>" + state);
     res.redirect('/auth-url?code=' + code + '&state=' + state)
 
 });
