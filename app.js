@@ -8,7 +8,7 @@ const editJsonFile = require("edit-json-file");
 const fs = require('fs');
 const { getgroups } = require('process');
 
-const redirect_uri = 'http://localhost:3000/callback/';
+const redirect_uri = 'http://localhost:3000/callback';
 
 const SECRET = 'maclesecrete'
 var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
@@ -16,6 +16,8 @@ var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
 var request = require('request');
 var cors = require('cors');
 app.use(cors());
+
+let mapping = []
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -31,6 +33,7 @@ app.get("/signup", (req, res) => {
 
     let file = editJsonFile(`Users.json`);
     var user_data = { "username": req.query.username, "password": req.query.password };
+    
     file.append("", user_data);
     file.save();
 
@@ -62,6 +65,19 @@ app.get("/signin", (req, res) => {
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
+
+
+function getRandomState(max) {
+    const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for ( let i = 0; i < max; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+
+    return result;
+}
+
 
 app.get("/group", (req, res) => {
     const token = req.query.token;
@@ -238,44 +254,93 @@ app.get("/mygroup", async (req, res) => {
     res.send(JSON.stringify(text));
 })
 
-app.get("/auth-url", (req, res) => {
-    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state';
+let user = {}
 
-    res.redirect('https://accounts.spotify.com/authorize?' +
-        querystring.stringify({
-            response_type: 'code',
-            client_id: clientCredentials.id,
-            scope: scope,
-            redirect_uri: redirect_uri,
-        }));
+app.get("/auth-url", (req, res) => {
+    var users = require('./Users.json');
+    let connect = require('./SpotifyAccounts.json')
+    let user2 = []
+
+    if (req.query.token){
+        jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
+            if (err) {
+                res.status(401).json({ message: 'Token invalide' })
+            }else{
+                user = users.filter(u => u.username == decodedToken.username)[0]
+                for (let i = 0; i < connect.length; i++) {
+                    if (user.username === connect[i].username) {
+                        user2 = connect[i]
+                    }    
+                }
+                if (!user.access_token && !user2.refresh_token) {
+
+                    let state = getRandomState(12)
+
+                    mapping[`${state}`] = user.username
+
+
+                    const scope = 'user-read-private user-read-email user-read-recently-played';
+                    res.send('https://accounts.spotify.com/authorize?' +
+                        querystring.stringify({
+                            response_type: 'code',
+                            client_id: clientCredentials.id,
+                            scope: scope,
+                            redirect_uri: redirect_uri,
+                            state: state
+                        }));
+                }else{
+                    //res.send(user2);
+                    res.send('Access token: ' + JSON.stringify(user2.refresh_token))
+                }
+            }
+        })
+    }else if(req.query.code){
+        let code = req.query.code
+        const authOptions = {
+            url: 'https://accounts.spotify.com/api/token',
+            form: {
+                code: code,
+                redirect_uri: redirect_uri,
+                grant_type: 'authorization_code'
+            },
+            headers: {
+                'Authorization': 'Basic ' +
+                    (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
+                'content-type': 'application/x-www-form-urlencoded'
+            },
+        };
+        axios.post(authOptions.url, authOptions.form, {
+            headers: authOptions.headers
+        }).then((response) => {
+            const data = response.data;
+
+            user['refresh_token'] = data.refresh_token
+            var user_data = { "username": user.username, "refresh_token": user.refresh_token };
+            try {
+                let file = editJsonFile(`SpotifyAccounts.json`);
+                file.append("", user_data);
+                file.save();
+                console.log("Information sauvé");
+            } catch (err) {
+                console.log('================');
+                console.log(err);
+                console.log('================');
+            }
+
+            res.send(data)
+        }).catch((err) => {
+            console.log(err)
+        });
+
+    }
+
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
+    const state = req.query.state
+    res.redirect('/auth-url?code=' + code + '&state=' + state)
 
-    const authOptions = {
-        url: 'https://accounts.spotify.com/api/token',
-        form: {
-            code: code,
-            redirect_uri: redirect_uri,
-            grant_type: 'authorization_code'
-        },
-        headers: {
-            'Authorization': 'Basic ' +
-                (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
-            'content-type': 'application/x-www-form-urlencoded'
-        },
-    };
-
-    axios.post(authOptions.url, authOptions.form, {
-        headers: authOptions.headers
-    }).then((response) => {
-        const data = response.data;
-        console.log(data);
-        res.json(data);
-    }).catch((err) => {
-        console.log(err)
-    });
 });
 
 app.get('/recently-played', async (req, res) => {
