@@ -3,7 +3,6 @@ const app = express();
 const querystring = require('querystring');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
-//const clientCredentials = require('./client-credentials2.json');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
 const fs = require('fs');
