@@ -3,7 +3,8 @@
     "user2": true,
     "user3": false
   },
-  "groupe555": {
-    "user1": true
+  "groupe2": {
+    "user1": true,
+    "admin": false
   }
 }
