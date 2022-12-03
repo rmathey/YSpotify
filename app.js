@@ -15,7 +15,13 @@ var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
 var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
 var request = require('request');
 var cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(cors());
+
+const qs = require('qs');
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -238,7 +244,18 @@ app.get("/mygroup", async (req, res) => {
     res.send(JSON.stringify(text));
 })
 
+
 app.get("/auth-url", (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+
+    const decoded = jwt.decode(token)
+
     const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state';
 
     res.redirect('https://accounts.spotify.com/authorize?' +
@@ -247,12 +264,13 @@ app.get("/auth-url", (req, res) => {
             client_id: clientCredentials.id,
             scope: scope,
             redirect_uri: redirect_uri,
+            state: decoded.username
         }));
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
-
+    var username = req.query.state;
     const authOptions = {
         url: 'https://accounts.spotify.com/api/token',
         form: {
@@ -271,7 +289,10 @@ app.get('/callback', (req, res) => {
         headers: authOptions.headers
     }).then((response) => {
         const data = response.data;
-        console.log(data);
+        var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
+        var refresh_token = data.refresh_token;
+        spotify_file.append("", { "username": username, "refresh_token": refresh_token })
+        spotify_file.save();
         res.json(data);
     }).catch((err) => {
         console.log(err)
@@ -324,3 +345,4 @@ app.get('/refresh_token', function (req, res) {
 app.listen(3000, () => {
     console.log("Server listening...")
 });
+
