@@ -13,9 +13,12 @@ const redirect_uri = 'http://localhost:3000/callback/';
 const SECRET = 'maclesecrete'
 var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
 var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
-const auth_token = Buffer.from(`${client_id}:${client_secret}`, 'utf-8').toString('base64');
 var request = require('request');
 var cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use(cors());
 
 const qs = require('qs');
