@@ -1,0 +1,158 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "YSpotify"
+    },
+    "paths": {
+        "/signup": {
+            "get": {
+                "summary": "FT-1 Inscription",
+                "description": "Créer un compte",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Username",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "description": "Password",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/signin": {
+            "get": {
+                "summary": "FT-2 Connexion",
+                "description": "Pour s'authentifier",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Username",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "description": "Password",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/auth-url": {
+            "get": {
+                "summary": "FT-3 Liaison du compte Spotify",
+                "description": "Pour s'authentifier avec son compte Spotify",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/group": {
+            "get": {
+                "summary": "FT-4 Rejoindre un Groupe",
+                "description": "Changer de groupe",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Nom du groupe",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/grouplist": {
+            "get": {
+                "summary": "FT-5 Consultation des Groupes et Utilisateurs - Liste des Groupes",
+                "description": "Lister l'ensemble des groupes",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/mygroup": {
+            "get": {
+                "summary": "FT-5 Consultation des Groupes et Utilisateurs - Liste des membres du Groupe",
+                "description": "Afficher les utilisateurs de mon groupe",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        }
+    }
+}

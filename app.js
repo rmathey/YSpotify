@@ -5,19 +5,30 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
-const fs = require('fs');
-const { getgroups } = require('process');
 
-const redirect_uri = 'http://localhost:3000/callback';
+const redirect_uri = 'http://localhost:3000/callback/';
 
-const SECRET = 'maclesecrete'
-var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
-var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
-var request = require('request');
-var cors = require('cors');
+const SECRET = 'EwsMvqu4NQQeyuFeWDcWN3KuhZ2gWc1jaEL6J64oQuGSPQUrtOzuJ5MLmhJ4CsbmOGiu25'
+const request = require('request');
+const cors = require('cors');
 app.use(cors());
 
-let mapping = []
+
+// Extended: https://swagger.io/specification/#infoObject
+const options = {
+    swaggerDefinition: {
+        info: {
+            title: "YSpotify",
+            servers: ["http://localhost:3000"]
+        }
+    },
+    apis: ["app.js"]
+};
+
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -33,7 +44,6 @@ app.get("/signup", (req, res) => {
 
     let file = editJsonFile(`Users.json`);
     var user_data = { "username": req.query.username, "password": req.query.password };
-    
     file.append("", user_data);
     file.save();
 
@@ -65,19 +75,6 @@ app.get("/signin", (req, res) => {
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
-
-
-function getRandomState(max) {
-    const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    const charactersLength = characters.length;
-    for ( let i = 0; i < max; i++ ) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-
-    return result;
-}
-
 
 app.get("/group", (req, res) => {
     const token = req.query.token;
@@ -131,9 +128,11 @@ app.get("/group", (req, res) => {
         }
 
         file.save();
+        return res.json({ message: 'Opération réussi' })
     }
-
-    return res.json({ message: 'fin' })
+    else {
+        return res.json({ message: "Une erreur s'est produite" })
+    }
 })
 
 app.get("/grouplist", (req, res) => {
@@ -155,12 +154,11 @@ app.get("/grouplist", (req, res) => {
     for (let i = 0; i < keys.length; i++) {
         var group_keys = Object.keys(file.toObject()[keys[i]]);
         text += "Nom: " + keys[i];
-        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
-        text += ' <br> ';
-        // A faire
-        // Refaire l'affichage du texte
+        text += ", Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
+        if (i != keys.length - 1) {
+            text += ' | ';
+        }
     }
-    //return res.json({ message: text })
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
@@ -191,8 +189,7 @@ app.get("/mygroup", async (req, res) => {
         if (user_keys_bis.includes(user.username)) {
             for (let j = 0; j < user_keys_bis.length; j++) {
                 text += "Nom: " + user_keys_bis[j];
-                text += ' <br> ';
-                text += " | Nom du groupe: " + group_keys[i];
+                text += " | Chef du groupe: " + file.get(group_keys[i] + "." + user_keys_bis[j]);
                 var spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                 if (spotify_account !== undefined) {
                     const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
@@ -238,10 +235,10 @@ app.get("/mygroup", async (req, res) => {
                         devices += item.name;
                         devices += " ";
                     });
-                    text += " | En écoute sur: " + devices;
+                    text += " | Dispositif d'écoute: " + devices;
 
                 }
-                text += ' <br> ';
+                text += '  ';
             }
             // Refaire l'affichage du texte
         }
@@ -254,112 +251,58 @@ app.get("/mygroup", async (req, res) => {
     res.send(JSON.stringify(text));
 })
 
-let user = {}
 
 app.get("/auth-url", (req, res) => {
-    var users = require('./Users.json');
-    let connect = require('./SpotifyAccounts.json')
-    let user2 = []
+    const token = req.query.token;
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
 
-    if (req.query.token){
-        jwt.verify(req.query.token, SECRET, (err, decodedToken) => {
-            if (err) {
-                res.status(401).json({ message: 'Token invalide' })
-            }else{
-                user = users.filter(u => u.username == decodedToken.username)[0]
-                for (let i = 0; i < connect.length; i++) {
-                    if (user.username === connect[i].username) {
-                        user2 = connect[i]
-                    }    
-                }
-                if (!user.access_token && !user2.refresh_token) {
+    const decoded = jwt.decode(token)
 
-                    let state = getRandomState(12)
+    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state';
 
-                    mapping[`${state}`] = user.username
-
-
-                    const scope = 'user-read-private user-read-email user-read-recently-played';
-                    res.send('https://accounts.spotify.com/authorize?' +
-                        querystring.stringify({
-                            response_type: 'code',
-                            client_id: clientCredentials.id,
-                            scope: scope,
-                            redirect_uri: redirect_uri,
-                            state: state
-                        }));
-                }else{
-                    //res.send(user2);
-                    res.send('Access token: ' + JSON.stringify(user2.refresh_token))
-                }
-            }
-        })
-    }else if(req.query.code){
-        let code = req.query.code
-        const authOptions = {
-            url: 'https://accounts.spotify.com/api/token',
-            form: {
-                code: code,
-                redirect_uri: redirect_uri,
-                grant_type: 'authorization_code'
-            },
-            headers: {
-                'Authorization': 'Basic ' +
-                    (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
-                'content-type': 'application/x-www-form-urlencoded'
-            },
-        };
-        axios.post(authOptions.url, authOptions.form, {
-            headers: authOptions.headers
-        }).then((response) => {
-            const data = response.data;
-
-            user['refresh_token'] = data.refresh_token
-            var user_data = { "username": user.username, "refresh_token": user.refresh_token };
-            try {
-                let file = editJsonFile(`SpotifyAccounts.json`);
-                file.append("", user_data);
-                file.save();
-                console.log("Information sauvé");
-            } catch (err) {
-                console.log('================');
-                console.log(err);
-                console.log('================');
-            }
-
-            res.send(data)
-        }).catch((err) => {
-            console.log(err)
-        });
-
-    }
-
+    res.redirect('https://accounts.spotify.com/authorize?' +
+        querystring.stringify({
+            response_type: 'code',
+            client_id: clientCredentials.id,
+            scope: scope,
+            redirect_uri: redirect_uri,
+            state: decoded.username
+        }));
 });
 
 app.get('/callback', (req, res) => {
     const code = req.query.code || null;
-    const state = req.query.state
-    res.redirect('/auth-url?code=' + code + '&state=' + state)
-
-});
-
-app.get('/recently-played', async (req, res) => {
-    const auth = req.header('Authorization');
-
-    if (!auth || !auth.startsWith('Bearer ')) {
-        res.status(401).send('Unauthorized');
-        return;
-    }
-
-    const token = auth.split(' ')[1];
-
-    const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
+    var username = req.query.state;
+    const authOptions = {
+        url: 'https://accounts.spotify.com/api/token',
+        form: {
+            code: code,
+            redirect_uri: redirect_uri,
+            grant_type: 'authorization_code'
+        },
         headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    });
+            'Authorization': 'Basic ' +
+                (Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')),
+            'content-type': 'application/x-www-form-urlencoded'
+        },
+    };
 
-    res.json(response.data);
+    axios.post(authOptions.url, authOptions.form, {
+        headers: authOptions.headers
+    }).then((response) => {
+        const data = response.data;
+        var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
+        var refresh_token = data.refresh_token;
+        spotify_file.append('', { "username": username, "refresh_token": refresh_token })
+        spotify_file.save();
+        res.json(data);
+    }).catch((err) => {
+        console.log(err)
+    });
 });
 
 app.get('/refresh_token', function (req, res) {
@@ -368,7 +311,7 @@ app.get('/refresh_token', function (req, res) {
     var refresh_token = req.query.refresh_token;
     var authOptions = {
         url: 'https://accounts.spotify.com/api/token',
-        headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
+        headers: { 'Authorization': 'Basic ' + (new Buffer(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
         form: {
             grant_type: 'refresh_token',
             refresh_token: refresh_token
