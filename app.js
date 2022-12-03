@@ -5,23 +5,32 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
-const fs = require('fs');
-const { getgroups } = require('process');
 
 const redirect_uri = 'http://localhost:3000/callback/';
 
-const SECRET = 'maclesecrete'
-var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
-var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
-var request = require('request');
-var cors = require('cors');
+const SECRET = 'EwsMvqu4NQQeyuFeWDcWN3KuhZ2gWc1jaEL6J64oQuGSPQUrtOzuJ5MLmhJ4CsbmOGiu25'
+const client_id = clientCredentials.id; // Your client id
+const client_secret = clientCredentials.secret; // Your secret
+const request = require('request');
+const cors = require('cors');
+app.use(cors());
+
+
+// Extended: https://swagger.io/specification/#infoObject
+const options = {
+    swaggerDefinition: {
+        info: {
+            title: "YSpotify",
+            servers: ["http://localhost:3000"]
+        }
+    },
+    apis: ["app.js"]
+};
+
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use(cors());
-
-const qs = require('qs');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -247,7 +256,6 @@ app.get("/mygroup", async (req, res) => {
 
 app.get("/auth-url", (req, res) => {
     const token = req.query.token;
-    var users = require('./Users.json');
     jwt.verify(token, SECRET, (err, decodedToken) => {
         if (err) {
             res.status(401).json({ message: 'Token invalide' })
@@ -299,25 +307,6 @@ app.get('/callback', (req, res) => {
     });
 });
 
-app.get('/recently-played', async (req, res) => {
-    const auth = req.header('Authorization');
-
-    if (!auth || !auth.startsWith('Bearer ')) {
-        res.status(401).send('Unauthorized');
-        return;
-    }
-
-    const token = auth.split(' ')[1];
-
-    const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    });
-
-    res.json(response.data);
-});
-
 app.get('/refresh_token', function (req, res) {
 
     // requesting access token from refresh token
@@ -345,4 +334,3 @@ app.get('/refresh_token', function (req, res) {
 app.listen(3000, () => {
     console.log("Server listening...")
 });
-

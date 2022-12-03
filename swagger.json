@@ -1,0 +1,158 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "YSpotify"
+    },
+    "paths": {
+        "/signup": {
+            "get": {
+                "summary": "Signup",
+                "description": "Créer un compte",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Username",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "description": "Password",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/signin": {
+            "get": {
+                "summary": "Signin",
+                "description": "Pour s'authentifier",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Username",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "description": "Password",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/auth-url": {
+            "get": {
+                "summary": "Lien compte Spotify",
+                "description": "Pour s'authentifier avec son compte Spotify",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/group": {
+            "get": {
+                "summary": "Changer mon groupe",
+                "description": "Changer de groupe",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Nom du groupe",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/grouplist": {
+            "get": {
+                "summary": "Liste des groupes",
+                "description": "Lister l'ensemble des groupes",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/mygroup": {
+            "get": {
+                "summary": "Mon groupe",
+                "description": "Afficher les utilisateurs de mon groupe",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        }
+    }
+}
