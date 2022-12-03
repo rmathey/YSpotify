@@ -6,7 +6,7 @@
     "paths": {
         "/signup": {
             "get": {
-                "summary": "Signup",
+                "summary": "FT-1 Inscription",
                 "description": "Créer un compte",
                 "parameters": [
                     {
@@ -35,7 +35,7 @@
         },
         "/signin": {
             "get": {
-                "summary": "Signin",
+                "summary": "FT-2 Connexion",
                 "description": "Pour s'authentifier",
                 "parameters": [
                     {
@@ -64,7 +64,7 @@
         },
         "/auth-url": {
             "get": {
-                "summary": "Lien compte Spotify",
+                "summary": "FT-3 Liaison du compte Spotify",
                 "description": "Pour s'authentifier avec son compte Spotify",
                 "parameters": [
                     {
@@ -85,7 +85,7 @@
         },
         "/group": {
             "get": {
-                "summary": "Changer mon groupe",
+                "summary": "FT-4 Rejoindre un Groupe",
                 "description": "Changer de groupe",
                 "parameters": [
                     {
@@ -114,7 +114,7 @@
         },
         "/grouplist": {
             "get": {
-                "summary": "Liste des groupes",
+                "summary": "FT-5 Consultation des Groupes et Utilisateurs - Liste des Groupes",
                 "description": "Lister l'ensemble des groupes",
                 "parameters": [
                     {
@@ -135,7 +135,7 @@
         },
         "/mygroup": {
             "get": {
-                "summary": "Mon groupe",
+                "summary": "FT-5 Consultation des Groupes et Utilisateurs - Liste des membres du Groupe",
                 "description": "Afficher les utilisateurs de mon groupe",
                 "parameters": [
                     {

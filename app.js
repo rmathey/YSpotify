@@ -9,8 +9,6 @@ const editJsonFile = require("edit-json-file");
 const redirect_uri = 'http://localhost:3000/callback/';
 
 const SECRET = 'EwsMvqu4NQQeyuFeWDcWN3KuhZ2gWc1jaEL6J64oQuGSPQUrtOzuJ5MLmhJ4CsbmOGiu25'
-const client_id = clientCredentials.id; // Your client id
-const client_secret = clientCredentials.secret; // Your secret
 const request = require('request');
 const cors = require('cors');
 app.use(cors());
@@ -130,9 +128,11 @@ app.get("/group", (req, res) => {
         }
 
         file.save();
+        return res.json({ message: 'Opération réussi' })
     }
-
-    return res.json({ message: 'fin' })
+    else {
+        return res.json({ message: "Une erreur s'est produite" })
+    }
 })
 
 app.get("/grouplist", (req, res) => {
@@ -154,12 +154,11 @@ app.get("/grouplist", (req, res) => {
     for (let i = 0; i < keys.length; i++) {
         var group_keys = Object.keys(file.toObject()[keys[i]]);
         text += "Nom: " + keys[i];
-        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
-        text += ' <br> ';
-        // A faire
-        // Refaire l'affichage du texte
+        text += ", Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
+        if (i != keys.length - 1) {
+            text += ' | ';
+        }
     }
-    //return res.json({ message: text })
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
@@ -190,8 +189,7 @@ app.get("/mygroup", async (req, res) => {
         if (user_keys_bis.includes(user.username)) {
             for (let j = 0; j < user_keys_bis.length; j++) {
                 text += "Nom: " + user_keys_bis[j];
-                text += ' <br> ';
-                text += " | Nom du groupe: " + group_keys[i];
+                text += " | Chef du groupe: " + file.get(group_keys[i] + "." + user_keys_bis[j]);
                 var spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                 if (spotify_account !== undefined) {
                     const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
@@ -237,10 +235,10 @@ app.get("/mygroup", async (req, res) => {
                         devices += item.name;
                         devices += " ";
                     });
-                    text += " | En écoute sur: " + devices;
+                    text += " | Dispositif d'écoute: " + devices;
 
                 }
-                text += ' <br> ';
+                text += '  ';
             }
             // Refaire l'affichage du texte
         }
@@ -299,7 +297,7 @@ app.get('/callback', (req, res) => {
         const data = response.data;
         var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
         var refresh_token = data.refresh_token;
-        spotify_file.append("", { "username": username, "refresh_token": refresh_token })
+        spotify_file.append('', { "username": username, "refresh_token": refresh_token })
         spotify_file.save();
         res.json(data);
     }).catch((err) => {
@@ -313,7 +311,7 @@ app.get('/refresh_token', function (req, res) {
     var refresh_token = req.query.refresh_token;
     var authOptions = {
         url: 'https://accounts.spotify.com/api/token',
-        headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
+        headers: { 'Authorization': 'Basic ' + (new Buffer(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
         form: {
             grant_type: 'refresh_token',
             refresh_token: refresh_token
