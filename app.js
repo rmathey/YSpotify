@@ -5,30 +5,23 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
+const fs = require('fs');
+const { getgroups } = require('process');
 
 const redirect_uri = 'http://localhost:3000/callback/';
 
-const SECRET = 'EwsMvqu4NQQeyuFeWDcWN3KuhZ2gWc1jaEL6J64oQuGSPQUrtOzuJ5MLmhJ4CsbmOGiu25'
-const request = require('request');
-const cors = require('cors');
+const SECRET = 'maclesecrete'
+var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
+var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
+var request = require('request');
+var cors = require('cors');
+/* const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json'); */
+
+/* app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument)); */
 app.use(cors());
 
-
-// Extended: https://swagger.io/specification/#infoObject
-const options = {
-    swaggerDefinition: {
-        info: {
-            title: "YSpotify",
-            servers: ["http://localhost:3000"]
-        }
-    },
-    apis: ["app.js"]
-};
-
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger.json');
-
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
+const qs = require('qs');
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -128,11 +121,9 @@ app.get("/group", (req, res) => {
         }
 
         file.save();
-        return res.json({ message: 'Opération réussi' })
     }
-    else {
-        return res.json({ message: "Une erreur s'est produite" })
-    }
+
+    return res.json({ message: 'fin' })
 })
 
 app.get("/grouplist", (req, res) => {
@@ -154,11 +145,12 @@ app.get("/grouplist", (req, res) => {
     for (let i = 0; i < keys.length; i++) {
         var group_keys = Object.keys(file.toObject()[keys[i]]);
         text += "Nom: " + keys[i];
-        text += ", Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
-        if (i != keys.length - 1) {
-            text += ' | ';
-        }
+        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
+        text += ' <br> ';
+        // A faire
+        // Refaire l'affichage du texte
     }
+    //return res.json({ message: text })
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
@@ -189,7 +181,8 @@ app.get("/mygroup", async (req, res) => {
         if (user_keys_bis.includes(user.username)) {
             for (let j = 0; j < user_keys_bis.length; j++) {
                 text += "Nom: " + user_keys_bis[j];
-                text += " | Chef du groupe: " + file.get(group_keys[i] + "." + user_keys_bis[j]);
+                text += ' <br> ';
+                text += " | Nom du groupe: " + group_keys[i];
                 var spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                 if (spotify_account !== undefined) {
                     const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
@@ -235,10 +228,10 @@ app.get("/mygroup", async (req, res) => {
                         devices += item.name;
                         devices += " ";
                     });
-                    text += " | Dispositif d'écoute: " + devices;
+                    text += " | En écoute sur: " + devices;
 
                 }
-                text += '  ';
+                text += ' <br> ';
             }
             // Refaire l'affichage du texte
         }
@@ -254,6 +247,7 @@ app.get("/mygroup", async (req, res) => {
 
 app.get("/auth-url", (req, res) => {
     const token = req.query.token;
+    var users = require('./Users.json');
     jwt.verify(token, SECRET, (err, decodedToken) => {
         if (err) {
             res.status(401).json({ message: 'Token invalide' })
@@ -297,12 +291,31 @@ app.get('/callback', (req, res) => {
         const data = response.data;
         var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
         var refresh_token = data.refresh_token;
-        spotify_file.append('', { "username": username, "refresh_token": refresh_token })
+        spotify_file.append("", { "username": username, "refresh_token": refresh_token })
         spotify_file.save();
         res.json(data);
     }).catch((err) => {
         console.log(err)
     });
+});
+
+app.get('/recently-played', async (req, res) => {
+    const auth = req.header('Authorization');
+
+    if (!auth || !auth.startsWith('Bearer ')) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+
+    const token = auth.split(' ')[1];
+
+    const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    res.json(response.data);
 });
 
 app.get('/refresh_token', function (req, res) {
@@ -311,7 +324,7 @@ app.get('/refresh_token', function (req, res) {
     var refresh_token = req.query.refresh_token;
     var authOptions = {
         url: 'https://accounts.spotify.com/api/token',
-        headers: { 'Authorization': 'Basic ' + (new Buffer(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
+        headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
         form: {
             grant_type: 'refresh_token',
             refresh_token: refresh_token
@@ -332,3 +345,4 @@ app.get('/refresh_token', function (req, res) {
 app.listen(3000, () => {
     console.log("Server listening...")
 });
+
