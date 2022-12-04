@@ -128,11 +128,9 @@ app.get("/group", (req, res) => {
         }
 
         file.save();
-        return res.json({ message: 'Opération réussi' })
     }
-    else {
-        return res.json({ message: "Une erreur s'est produite" })
-    }
+
+    return res.json({ message: 'fin' })
 })
 
 app.get("/grouplist", (req, res) => {
@@ -154,11 +152,12 @@ app.get("/grouplist", (req, res) => {
     for (let i = 0; i < keys.length; i++) {
         var group_keys = Object.keys(file.toObject()[keys[i]]);
         text += "Nom: " + keys[i];
-        text += ", Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
-        if (i != keys.length - 1) {
-            text += ' | ';
-        }
+        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
+        text += ' <br> ';
+        // A faire
+        // Refaire l'affichage du texte
     }
+    //return res.json({ message: text })
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
@@ -189,7 +188,8 @@ app.get("/mygroup", async (req, res) => {
         if (user_keys_bis.includes(user.username)) {
             for (let j = 0; j < user_keys_bis.length; j++) {
                 text += "Nom: " + user_keys_bis[j];
-                text += " | Chef du groupe: " + file.get(group_keys[i] + "." + user_keys_bis[j]);
+                text += ' <br> ';
+                text += " | Nom du groupe: " + group_keys[i];
                 var spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                 if (spotify_account !== undefined) {
                     const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
@@ -216,7 +216,7 @@ app.get("/mygroup", async (req, res) => {
                             artists += item.name;
                             artists += " ";
                         });
-                        text += " | Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
+                        texundefinedt += " | Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
                     }
                     else {
                         text += " | Aucune écoute actuellement";
@@ -235,10 +235,10 @@ app.get("/mygroup", async (req, res) => {
                         devices += item.name;
                         devices += " ";
                     });
-                    text += " | Dispositif d'écoute: " + devices;
+                    text += " | En écoute sur: " + devices;
 
                 }
-                text += '  ';
+                text += ' <br> ';
             }
             // Refaire l'affichage du texte
         }
@@ -262,8 +262,8 @@ app.get("/auth-url", (req, res) => {
 
     const decoded = jwt.decode(token)
 
-    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state';
 
+    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read';
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
@@ -297,7 +297,7 @@ app.get('/callback', (req, res) => {
         const data = response.data;
         var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
         var refresh_token = data.refresh_token;
-        spotify_file.append('', { "username": username, "refresh_token": refresh_token })
+        spotify_file.append("", { "username": username, "refresh_token": refresh_token })
         spotify_file.save();
         res.json(data);
     }).catch((err) => {
@@ -311,7 +311,7 @@ app.get('/refresh_token', function (req, res) {
     var refresh_token = req.query.refresh_token;
     var authOptions = {
         url: 'https://accounts.spotify.com/api/token',
-        headers: { 'Authorization': 'Basic ' + (new Buffer(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
+        headers: { 'Authorization': 'Basic ' + (new Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
         form: {
             grant_type: 'refresh_token',
             refresh_token: refresh_token
@@ -329,6 +329,113 @@ app.get('/refresh_token', function (req, res) {
     });
 });
 
+app.get('/recently-played', async (req, res) => {
+    const auth = req.header('Authorization');
+
+    if (!auth || !auth.startsWith('Bearer ')) {
+        res.status(401).send('Unauthorized');
+        return;
+    }
+
+    const token = auth.split(' ')[1];
+
+    const response = await axios.get('https://api.spotify.com/v1/me/player/recently-played', {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    res.json(response.data);
+});
+
+app.get("/userpersonality", async (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+    console.log('infos du user');
+    const decoded = jwt.decode(token)
+    const user = users.filter(u => u.username == decoded.username)[0];
+
+    var text = '';
+
+    var spotify_accounts = require('./SpotifyAccounts.json');
+    var spotify_account = spotify_accounts.filter(u => u.username == user.username)[0];
+    if (spotify_account !== undefined) {
+        const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
+        var arg_danceability = 0;
+        var avg_tempo = 0;
+        var avg_instrumentalness = 0;
+        var avg_valence = 0;
+
+        const requete_pseudo = await axios.get(
+            'https://api.spotify.com/v1/me',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " Personnalité Utilisateur :";
+        text += "| Pseudo Spotify: " + requete_pseudo.data.display_name;
+        var requete_tracks = await axios.get(
+            'https://api.spotify.com/v1/me/tracks',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " | Nombre de musiques likés: " + requete_tracks.data.total;
+
+        for (let i = 0; i < requete_tracks.data.items.length; i++) {
+            var element = requete_tracks.data.items[i];
+
+            var requete_audio_features = await axios.get(
+                'https://api.spotify.com/v1/audio-features/' + element.track.id,
+                {
+                    headers: {
+                        Authorization: `Bearer ${access_token_request.data.access_token}`
+                    }
+                });
+            arg_danceability += requete_audio_features.data.danceability;
+            avg_tempo = requete_audio_features.data.tempo;
+            avg_instrumentalness = requete_audio_features.data.instrumentalness;
+            avg_valence = requete_audio_features.data.valence
+        }
+
+        const len_tracks = requete_tracks.data.items.length;
+        arg_danceability = arg_danceability / len_tracks;
+        arg_danceability *= 10;
+        arg_danceability = Math.round(arg_danceability);
+        avg_tempo = avg_tempo / len_tracks;
+        avg_instrumentalness = avg_instrumentalness / len_tracks;
+        avg_valence = avg_valence / len_tracks;
+
+        text += " | Attrait pour la dance: " + arg_danceability;
+        text += " | Agitation: " + avg_tempo;
+        text += " | Préférence entre les musiques vocales ou instrumentales: " + avg_instrumentalness;
+        text += " | Attitude plutôt positive ou négative: " + avg_valence;
+
+        // Stocker dans un tableau les valeurs tempo de chaque track 
+        // Faire une boucle for avec i<10 faire 10 appels et ensuite faire la moyenne de ces valeurs
+
+    }
+    text += '  ';
+
+    if (text == '') {
+        text = "Pas de profil personnalité sur cet utilisateur"
+    }
+    res.set('Content-Type', 'text/html');
+    res.send(JSON.stringify(text));
+
+
+})
+
 app.listen(3000, () => {
     console.log("Server listening...")
 });
+
+
