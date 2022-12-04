@@ -216,7 +216,7 @@ app.get("/mygroup", async (req, res) => {
                             artists += item.name;
                             artists += " ";
                         });
-                        texundefinedt += " | Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
+                        text += " | Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
                     }
                     else {
                         text += " | Aucune écoute actuellement";
@@ -263,7 +263,7 @@ app.get("/auth-url", (req, res) => {
     const decoded = jwt.decode(token)
 
 
-    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read';
+    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read user-modify-playback-state';
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
@@ -432,7 +432,94 @@ app.get("/userpersonality", async (req, res) => {
     res.send(JSON.stringify(text));
 
 
-})
+});
+
+app.get("/sync", async (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+
+    const decoded = jwt.decode(token)
+    const user = users.filter(u => u.username == decoded.username)[0];
+
+    var groups = require('./Groups.json');
+    let file = editJsonFile(`./Groups.json`);
+
+    var text = '';
+    let group_keys = Object.keys(groups);
+
+    for (let i = 0; i < group_keys.length; i++) {
+
+        var user_keys_bis = Object.keys(file.toObject()[group_keys[i]]);
+        var spotify_accounts = require('./SpotifyAccounts.json');
+        var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
+        var user_has_spotify_account = spotify_accounts.filter(u => u.username == user.username)[0];
+        if (user_keys_bis.includes(user.username) && user_has_spotify_account !== undefined) {
+            if (file.get(group_keys[i] + "." + user.username)) {
+                const access_token_request_user = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + user_has_spotify_account.refresh_token);
+                const acces_token_user = access_token_request_user.data.access_token;
+                var requete_musique = await axios.get(
+                    'https://api.spotify.com/v1/me/player/currently-playing/',
+                    {
+                        headers: {
+                            Authorization: `Bearer ${acces_token_user}`
+                        }
+                    });
+                if (requete_musique.data) {
+                    var artists = ''
+                    requete_musique.data.item.artists.forEach(function (item) {
+                        artists += item.name;
+                        artists += " ";
+                    });
+                    var album_uri = requete_musique.data.item.album.uri;
+                    var song_position = requete_musique.data.item.track_number - 1;
+                    var song_progress_ms = parseInt(requete_musique.data.progress_ms);
+                    text += " ,Track id: " + album_uri + " de " + artists;
+                }
+                else {
+                    text += "  ,Aucune écoute actuellement";
+                }
+                for (let j = 0; j < user_keys_bis.length; j++) {
+                    var group_member_has_spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
+                    if (group_member_has_spotify_account !== undefined) {
+                        var access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + group_member_has_spotify_account.refresh_token);
+
+                        var requete_musique = await axios.put(
+                            'https://api.spotify.com/v1/me/player/play/',
+                            {
+                                "context_uri": album_uri,
+                                "offset": {
+                                    "position": song_position
+                                },
+                                "position_ms": song_progress_ms
+                            },
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${acces_token_user}`
+                                }
+                            });
+                    }
+                }
+            }
+            else {
+                text = "L'utilisateur n'est doit être le chef du groupe";
+            }
+        }
+        else {
+            text = "L'utilisateur doit avoir lié son compte Spotify";
+        }
+    }
+
+    if (text == '') {
+        text = "L'utilisateur n'appartient à aucun groupe";
+    }
+    res.set('Content-Type', 'text/html');
+    res.send(JSON.stringify(text));
+});
 
 app.listen(3000, () => {
     console.log("Server listening...")

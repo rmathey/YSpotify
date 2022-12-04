@@ -1,8 +1,8 @@
 {
   "groupe1": {
-    "user2": true,
+    "user2": false,
     "user3": false,
-    "user1": false
+    "user1": true
   },
   "groupe2": {
     "admin": true

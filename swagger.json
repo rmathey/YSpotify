@@ -153,6 +153,48 @@
                     }
                 }
             }
+        },
+        "/userpersonality": {
+            "get": {
+                "summary": "FT-6 Personnalité de l’Utilisateur",
+                "description": "Afficher la personalité de l'utilisateur",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
+        },
+        "/sync": {
+            "get": {
+                "summary": "FT-7 Synchronisation",
+                "description": "Si l'utilisateur est le chef du groupe, il peut synchroniser la musique qu’il est en train d’écouter sur tous les appareils actifs des autres Utilisateurs ",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
         }
     }
 }
