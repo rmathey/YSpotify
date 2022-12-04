@@ -5,23 +5,30 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const clientCredentials = require('./client-credentials.json');
 const editJsonFile = require("edit-json-file");
-const fs = require('fs');
-const { getgroups } = require('process');
 
 const redirect_uri = 'http://localhost:3000/callback/';
 
-const SECRET = 'maclesecrete'
-var client_id = 'cb0c0710db6548868881fedf64ecec86'; // Your client id
-var client_secret = '46e7086ca67548fcb776fc1d34e64c5e'; // Your secret
-var request = require('request');
-var cors = require('cors');
-/* const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger.json'); */
-
-/* app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument)); */
+const SECRET = 'EwsMvqu4NQQeyuFeWDcWN3KuhZ2gWc1jaEL6J64oQuGSPQUrtOzuJ5MLmhJ4CsbmOGiu25'
+const request = require('request');
+const cors = require('cors');
 app.use(cors());
 
-const qs = require('qs');
+
+// Extended: https://swagger.io/specification/#infoObject
+const options = {
+    swaggerDefinition: {
+        info: {
+            title: "YSpotify",
+            servers: ["http://localhost:3000"]
+        }
+    },
+    apis: ["app.js"]
+};
+
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 
 app.get("/signup", (req, res) => {
     if (!req.query.username || !req.query.password) {
@@ -247,17 +254,17 @@ app.get("/mygroup", async (req, res) => {
 
 app.get("/auth-url", (req, res) => {
     const token = req.query.token;
-    var users = require('./Users.json');
     jwt.verify(token, SECRET, (err, decodedToken) => {
         if (err) {
             res.status(401).json({ message: 'Token invalide' })
         }
     })
 
-    const decoded = jwt.decode(token)
+    const decoded = jwt.decode(token) 
 
-    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state';
 
+    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state ';
+    /* user-library-read */
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
@@ -299,6 +306,30 @@ app.get('/callback', (req, res) => {
     });
 });
 
+app.get('/refresh_token', function (req, res) {
+
+    // requesting access token from refresh token
+    var refresh_token = req.query.refresh_token;
+    var authOptions = {
+        url: 'https://accounts.spotify.com/api/token',
+        headers: { 'Authorization': 'Basic ' + (new Buffer.from(clientCredentials.id + ':' + clientCredentials.secret).toString('base64')) },
+        form: {
+            grant_type: 'refresh_token',
+            refresh_token: refresh_token
+        },
+        json: true
+    };
+
+    request.post(authOptions, function (error, response, body) {
+        if (!error && response.statusCode === 200) {
+            var access_token = body.access_token;
+            res.send({
+                'access_token': access_token
+            });
+        }
+    });
+});
+
 app.get('/recently-played', async (req, res) => {
     const auth = req.header('Authorization');
 
@@ -318,31 +349,84 @@ app.get('/recently-played', async (req, res) => {
     res.json(response.data);
 });
 
-app.get('/refresh_token', function (req, res) {
-
-    // requesting access token from refresh token
-    var refresh_token = req.query.refresh_token;
-    var authOptions = {
-        url: 'https://accounts.spotify.com/api/token',
-        headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-        form: {
-            grant_type: 'refresh_token',
-            refresh_token: refresh_token
-        },
-        json: true
-    };
-
-    request.post(authOptions, function (error, response, body) {
-        if (!error && response.statusCode === 200) {
-            var access_token = body.access_token;
-            res.send({
-                'access_token': access_token
-            });
+app.get("/userpersonality", async (req, res) => {
+    const token = req.query.token;
+    var users = require('./Users.json');
+    
+    jwt.verify(token, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
         }
-    });
-});
+    })
+    console.log('infos du user');
+    const decoded = jwt.decode(token)
+    const user = users.filter(u => u.username == decoded.username)[0];
+    
+    var text = '';
+
+    var spotify_accounts = require('./SpotifyAccounts.json');
+    var spotify_account = spotify_accounts.filter(u => u.username == user.username)[0];
+    if (spotify_account !== undefined) {
+        const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
+
+        const requete_pseudo = await axios.get(
+            'https://api.spotify.com/v1/me',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " Personnalité Utilisateur :" ;
+        text += "| Pseudo Spotify: " + requete_pseudo.data.display_name;
+        var requete_tracks = await axios.get(
+            'https://api.spotify.com/v1/me/tracks',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " | Nombre de musiques likés: " + requete_tracks.data.items;
+    
+
+        var requete_personality  = await axios.get(
+            'https://api.spotify.com/v1/audio-features',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " | Tempo moyen: " + requete_personality.data.tempo;
+        /* text += " | attitude moyenne: " + requete_personality.data.valence;
+        text += " | Attrait pour la dance : " + requete_personality.data.danceability;
+        text += " | Musiques instrumentales ou vocales : " + requete_personality.data.instrumentalness; */
+
+        var requete_test  = await axios.get(
+            'https://api.spotify.com/v1/audio-features',
+            {
+                headers: {
+                    Authorization: `Bearer ${access_token_request.data.access_token}`
+                }
+            });
+        text += " | Tempo moyen: " + requete_test.data.tempo;
+        text += " | attitude moyenne: " + requete_test.data.valence;
+        
+    // Stocker dans un tableau les valeurs tempo de chaque track 
+    // Faire une boucle for avec i<10 faire 10 appels et ensuite faire la moyenne de ces valeurs
+
+    }
+    text += '  ';
+
+    if (text == '') {
+        text = "Pas de profil personnalité sur cet utilisateur"
+    }
+    res.set('Content-Type', 'text/html');
+    res.send(JSON.stringify(text));
+
+ 
+})
 
 app.listen(3000, () => {
     console.log("Server listening...")
 });
+
 
