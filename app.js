@@ -130,7 +130,7 @@ app.get("/group", (req, res) => {
         file.save();
     }
 
-    return res.json({ message: 'fin' })
+    return res.json({ message: 'Opération réussi' })
 })
 
 app.get("/grouplist", (req, res) => {
@@ -152,12 +152,11 @@ app.get("/grouplist", (req, res) => {
     for (let i = 0; i < keys.length; i++) {
         var group_keys = Object.keys(file.toObject()[keys[i]]);
         text += "Nom: " + keys[i];
-        text += " Nombre de personnes dans le groupe: " + Object.keys(group_keys).length;
-        text += ' <br> ';
-        // A faire
-        // Refaire l'affichage du texte
+        text += " ,Nombre de personnes: " + Object.keys(group_keys).length;
+        if (i != keys.length - 1) {
+            text += ' | ';
+        }
     }
-    //return res.json({ message: text })
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
 })
@@ -188,8 +187,7 @@ app.get("/mygroup", async (req, res) => {
         if (user_keys_bis.includes(user.username)) {
             for (let j = 0; j < user_keys_bis.length; j++) {
                 text += "Nom: " + user_keys_bis[j];
-                text += ' <br> ';
-                text += " | Nom du groupe: " + group_keys[i];
+                text += " ,Nom du groupe: " + group_keys[i];
                 var spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                 if (spotify_account !== undefined) {
                     const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + spotify_account.refresh_token);
@@ -216,10 +214,10 @@ app.get("/mygroup", async (req, res) => {
                             artists += item.name;
                             artists += " ";
                         });
-                        text += " | Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
+                        text += " ,Morceau en cours d'écoute: " + requete_musique.data.item.name + " de " + artists;
                     }
                     else {
-                        text += " | Aucune écoute actuellement";
+                        text += " ,Aucune écoute actuellement";
                     }
 
                     var requete_device = await axios.get(
@@ -235,12 +233,13 @@ app.get("/mygroup", async (req, res) => {
                         devices += item.name;
                         devices += " ";
                     });
-                    text += " | En écoute sur: " + devices;
+                    text += " ,En écoute sur: " + devices;
 
                 }
-                text += ' <br> ';
+                if (j != user_keys_bis.length - 1) {
+                    text += ' | ';
+                }
             }
-            // Refaire l'affichage du texte
         }
     }
 
@@ -451,15 +450,15 @@ app.get("/sync", async (req, res) => {
 
     var text = '';
     let group_keys = Object.keys(groups);
-
+    var is_leader = false;
     for (let i = 0; i < group_keys.length; i++) {
-
         var user_keys_bis = Object.keys(file.toObject()[group_keys[i]]);
         var spotify_accounts = require('./SpotifyAccounts.json');
         var spotify_file = editJsonFile(`./SpotifyAccounts.json`);
         var user_has_spotify_account = spotify_accounts.filter(u => u.username == user.username)[0];
         if (user_keys_bis.includes(user.username) && user_has_spotify_account !== undefined) {
             if (file.get(group_keys[i] + "." + user.username)) {
+                is_leader = true;
                 const access_token_request_user = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + user_has_spotify_account.refresh_token);
                 const acces_token_user = access_token_request_user.data.access_token;
                 var requete_musique = await axios.get(
@@ -481,13 +480,14 @@ app.get("/sync", async (req, res) => {
                     text += " ,Track id: " + album_uri + " de " + artists;
                 }
                 else {
-                    text += "  ,Aucune écoute actuellement";
+                    text = "Aucune écoute actuellement";
                 }
                 for (let j = 0; j < user_keys_bis.length; j++) {
                     var group_member_has_spotify_account = spotify_accounts.filter(u => u.username == user_keys_bis[j])[0];
                     if (group_member_has_spotify_account !== undefined) {
-                        var access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + group_member_has_spotify_account.refresh_token);
-
+                        var access_token_request_member = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + group_member_has_spotify_account.refresh_token);
+                        var acces_token_group_member = access_token_request_member.data.access_token;
+                        console.log(acces_token_group_member);
                         var requete_musique = await axios.put(
                             'https://api.spotify.com/v1/me/player/play/',
                             {
@@ -499,23 +499,18 @@ app.get("/sync", async (req, res) => {
                             },
                             {
                                 headers: {
-                                    Authorization: `Bearer ${acces_token_user}`
+                                    Authorization: `Bearer ${acces_token_group_member}`
                                 }
                             });
                     }
                 }
+                text = "Opération réussi";
             }
-            else {
-                text = "L'utilisateur n'est doit être le chef du groupe";
-            }
-        }
-        else {
-            text = "L'utilisateur doit avoir lié son compte Spotify";
         }
     }
 
     if (text == '') {
-        text = "L'utilisateur n'appartient à aucun groupe";
+        text = "L'utilisateur doit: avoir lié son compte Spotify, doit être le chef du groupe, doit appartenir à un groupe  ";
     }
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
