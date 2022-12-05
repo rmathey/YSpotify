@@ -12,15 +12,13 @@ Ricotta Giovanni
 
 npm install express   
 npm install nodemon
-npm install axios
-
-
-npm install cors 
-npm install edit-json-file
-npm install request   
-npm install jsonwebtoken    
-npm install swagger-jsdoc
-npm install swagger-ui-express
+npm install axios 
+npm install cors  
+npm install edit-json-file 
+npm install request    
+npm install jsonwebtoken     
+npm install swagger-jsdoc 
+npm install swagger-ui-express 
 
 # Lancement server : 
 
