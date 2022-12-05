@@ -27,6 +27,7 @@ const options = {
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
+const { constants } = require('zlib');
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, options));
 
@@ -262,7 +263,7 @@ app.get("/auth-url", (req, res) => {
     const decoded = jwt.decode(token)
 
 
-    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read user-modify-playback-state';
+    const scope = 'user-read-private user-read-email user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read user-modify-playback-state playlist-read-private playlist-read-collaborative user-top-read playlist-modify-public playlist-modify-private';
     res.redirect('https://accounts.spotify.com/authorize?' +
         querystring.stringify({
             response_type: 'code',
@@ -514,6 +515,80 @@ app.get("/sync", async (req, res) => {
     }
     res.set('Content-Type', 'text/html');
     res.send(JSON.stringify(text));
+});
+
+app.post('/addplaylist', async (req, res) => {
+
+    const qToken = req.query.token;
+    var users = require('./Users.json');
+    jwt.verify(qToken, SECRET, (err, decodedToken) => {
+        if (err) {
+            res.status(401).json({ message: 'Token invalide' })
+        }
+    })
+
+    const decoded = jwt.decode(qToken)
+    const user = users.filter(u => u.username == req.query.username)[0];
+
+    var spotify_file = require('./SpotifyAccounts.json');
+
+    var spotify_account = spotify_file.filter(u => u.username == user.username)[0];
+
+    if (spotify_account !== undefined) {
+        const rfrshToken = spotify_account.refresh_token
+        const access_token_request = await axios.get('http://localhost:3000/refresh_token/?refresh_token=' + rfrshToken);
+
+
+        /// CREATION DE PLAYLIST 
+        const token = access_token_request.data.access_token;
+
+        const response_profile = await axios.get('	https://api.spotify.com/v1/me', {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+
+        var user_id = response_profile.data.id;
+
+        const response_create_playlist = await axios.post('	https://api.spotify.com/v1/users/' + user_id + '/playlists', {
+            'name': req.query.nom,
+            'description': req.query.des,
+            'public': false
+        }, {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+        });
+        console.log(response_create_playlist.data.id);
+        var playlist_id = response_create_playlist.data.id;
+        // RECUPERATION DES 10 TITRES FAVORIS 
+
+        const response_get_titles = await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=10&offset=0', {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+        console.log(response_get_titles.data.items);
+        var tracks_data = response_get_titles.data.items;
+        var uris = '';
+        for (let i = 0; i < tracks_data.length; i++) {
+            uris += tracks_data[i].uri;
+            if (i != tracks_data.length - 1) {
+                uris += ',';
+            }
+        }
+        // AJOUT DES 10 TITRES D'UN USER DANS LA PLAYLIST CREEE
+
+        const response_MDR = await axios.post('	https://api.spotify.com/v1/playlists/' + playlist_id + '/tracks?uris=' + uris, {}
+            , {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
+
+    }
+
+    res.send(JSON.stringify("Operation reussi"));
 });
 
 app.listen(3000, () => {

@@ -195,6 +195,51 @@
                     }
                 }
             }
+        },
+        "/addplaylist": {
+            "post": {
+                "summary": "FT-8 Playlist",
+                "description": "L’Utilisateur peut demander la création d’une playlist sur son compte Spotify contenant les 10 musiques préférées d’un autre Utilisateur (qui peut être lui-même) passé en paramètre",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "description": "Token JWT",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "description": "Nom de l'utilisateur",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "nom",
+                        "in": "query",
+                        "description": "Nom de la playlist",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    },
+                    {
+                        "name": "des",
+                        "in": "query",
+                        "description": "Description de la playlist",
+                        "required": true,
+                        "type": "string",
+                        "format": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Opération réussie"
+                    }
+                }
+            }
         }
     }
 }
